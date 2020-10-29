@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<title>Fnord Foundation - SHV/BOS covid visualizations</title>
+<div id="main">
+    
+</div>
+<script>
+    // some plain js to start us out
+    fetch('caddo.json')
+        .then(resp=>resp.json())
+        .then(console.log)
+
+    const svg = d3.select('#main')
+        .append('svg')
+        
+    
+</script>
