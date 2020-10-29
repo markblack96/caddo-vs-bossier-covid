@@ -5,18 +5,17 @@ from bottle import route, run, static_file
 def index():
     return static_file('index.html', root='./public/')
 
+@route('/scripts/<filename>')
+def scripts(filename):
+    return static_file(filename, root='./public/')
+    # this can't be a great idea but i don't wanna figure out the template stuff rn tbqh
+
 @route('/caddo.json')
 def caddo():
-    with open('data/caddo.json', 'r') as f:
-        data = f.read()
-        f.close()
-    return data
+    return static_file('caddo.json', root='./data/')
 
 @route('/bossier.json')
 def bossier():
-    with open('data/bossier.json', 'r') as f:
-        data = f.read()
-        f.close()
-    return data
+    return static_file('bossier.json', root='./data/')
 
 run(host='localhost', port=5000)
