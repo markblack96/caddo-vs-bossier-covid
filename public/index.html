@@ -1,25 +1,46 @@
 <!DOCTYPE html>
 <title>Fnord Foundation - SHV/BOS covid visualizations</title>
+<style>
+    body {
+        background-color: #eee;
+    }
+    div#main {
+        display: flex;
+    }
+    div#main div {
+        width: 100%;
+    }
+</style>
 <div id="main">
-    
+    <div id="caddo"></div>
+    <div id="bossier"></div>
 </div>
 <script src="scripts/d3.js"></script>
 <script>
+    // declaring these up here for now, will do this better with new features
+    // src: https://www.census.gov/data/datasets/time-series/demo/popest/2010s-counties-total.html
+(async ()=>{
+    const BOSSIER_POP_2019 = 127039;
+    const CADDO_POP_2019 = 240204;
+
     let margin = {top: 10, right: 30, bottom: 30, left: 60},
-        width = 640 - margin.left - margin.right,
+        width = document.querySelector('#caddo').offsetWidth - margin.left - margin.right,
         height = 400 - margin.top - margin.bottom;
 
-    // some plain js to start us out
-    fetch('caddo.json')
-        .then(resp=>resp.json())
-        .then(console.log)
 
+    // grab bossier's data so we can get yStandard
+    let bossierData = async ()=>{
+        return d3.max(await fetch('bossier.json').then(data=>data.json()), d=>d['Daily Case Count']/BOSSIER_POP_2019);
+    } 
+    let yStandard = [0, await bossierData()];
+    console.log(yStandard);
+    
     let header = document.createElement('h3');
-    header.innerText = "Bossier Parish Covid-19 daily cases";
-    document.querySelector('#main')
+    header.innerText = "Bossier Parish Covid-19 daily cases per capita";
+    document.querySelector('#bossier')
             .appendChild(header);
 
-    const svg = d3.select('#main')
+    const bossierSvg = d3.select('#bossier')
         .append('svg')
             .attr('width', width + margin.left + margin.right)
             .attr('height', height + margin.top + margin.bottom)
@@ -41,26 +62,79 @@
                 .domain(d3.extent(json, d=>d['Lab Collection Date']))
                 .range([0, width])
             
-            svg.append('g')
+            bossierSvg.append('g')
                 .attr('transform', `translate(0, ${height})`)
                 .call(d3.axisBottom(x));
 
             let y = d3.scaleLinear()
-                .domain([0, d3.max(json, d=> d['Daily Case Count'])])
+                // .domain([0, d3.max(json, d=> d['Daily Case Count']/BOSSIER_POP_2019)])
+                .domain(yStandard)
                 .range([height, 0])
-            svg.append('g')
+            bossierSvg.append('g')
                 .call(d3.axisLeft(y));
             
             // append the line
-            svg.append('path')
+            bossierSvg.append('path')
                 .datum(json)
                 .attr('fill', 'none')
-                .attr('stroke', 'black')
+                .attr('stroke', '#222')
                 .attr('stroke-width', 1.5)
                 .attr('d', d3.line()
                     .x(d=>x(d['Lab Collection Date']))
-                    .y(d=>y(d['Daily Case Count']))
+                    .y(d=>y(d['Daily Case Count']/BOSSIER_POP_2019))
                 )
+                
         })
+    
+    let caddoHeader = document.createElement('h3');
+    caddoHeader.innerText = "Caddo Parish Covid-19 daily cases per capita";
+    document.querySelector('#caddo')
+            .appendChild(caddoHeader);
 
+    const caddoSvg = d3.select('#caddo')
+        .append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+        .append('g')
+            .attr('transform',
+                  'translate(' + margin.left + ',' + margin.top + ")");
+
+
+    d3.json('caddo.json')
+        .then((json=>{
+            // format Lab Collection Date
+            json.forEach((d,i)=>{
+                // we need to strip the last three 0's from Lab Collection Date or we get weird numbers
+                d['Lab Collection Date'] = d3.timeParse('%s')(String(d['Lab Collection Date']).slice(0, -3));
+                console.log(d);
+                json[i] = d;
+            })
+
+            let x = d3.scaleTime()
+                .domain(d3.extent(json, d=>d['Lab Collection Date']))
+                .range([0, width])
+            
+            caddoSvg.append('g')
+                .attr('transform', `translate(0, ${height})`)
+                .call(d3.axisBottom(x));
+
+            let y = d3.scaleLinear()
+                // .domain([0, d3.max(json, d=> d['Daily Case Count']/CADDO_POP_2019)])
+                .domain(yStandard)
+                .range([height, 0])
+                caddoSvg.append('g')
+                .call(d3.axisLeft(y));
+            
+            // append the line
+            caddoSvg.append('path')
+                .datum(json)
+                .attr('fill', 'none')
+                .attr('stroke', '#222')
+                .attr('stroke-width', 1.5)
+                .attr('d', d3.line()
+                    .x(d=>x(d['Lab Collection Date']))
+                    .y(d=>y(d['Daily Case Count']/CADDO_POP_2019))
+                )
+        }))
+})()
 </script>
