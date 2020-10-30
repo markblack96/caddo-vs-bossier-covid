@@ -6,13 +6,18 @@
 <script src="scripts/d3.js"></script>
 <script>
     let margin = {top: 10, right: 30, bottom: 30, left: 60},
-        width = 460 - margin.left - margin.right,
+        width = 640 - margin.left - margin.right,
         height = 400 - margin.top - margin.bottom;
 
     // some plain js to start us out
     fetch('caddo.json')
         .then(resp=>resp.json())
         .then(console.log)
+
+    let header = document.createElement('h3');
+    header.innerText = "Bossier Parish Covid-19 daily cases";
+    document.querySelector('#main')
+            .appendChild(header);
 
     const svg = d3.select('#main')
         .append('svg')
@@ -22,10 +27,40 @@
             .attr('transform',
                   'translate(' + margin.left + ',' + margin.top + ")");
         
-    d3.json('caddo.json')
+    d3.json('bossier.json')
         .then(json=>{
-            // 
+            // format Lab Collection Date
+            json.forEach((d,i)=>{
+                // we need to strip the last three 0's from Lab Collection Date or we get weird numbers
+                d['Lab Collection Date'] = d3.timeParse('%s')(String(d['Lab Collection Date']).slice(0, -3));
+                console.log(d);
+                json[i] = d;
+            })
+            
+            let x = d3.scaleTime()
+                .domain(d3.extent(json, d=>d['Lab Collection Date']))
+                .range([0, width])
+            
+            svg.append('g')
+                .attr('transform', `translate(0, ${height})`)
+                .call(d3.axisBottom(x));
+
+            let y = d3.scaleLinear()
+                .domain([0, d3.max(json, d=> d['Daily Case Count'])])
+                .range([height, 0])
+            svg.append('g')
+                .call(d3.axisLeft(y));
+            
+            // append the line
+            svg.append('path')
+                .datum(json)
+                .attr('fill', 'none')
+                .attr('stroke', 'black')
+                .attr('stroke-width', 1.5)
+                .attr('d', d3.line()
+                    .x(d=>x(d['Lab Collection Date']))
+                    .y(d=>y(d['Daily Case Count']))
+                )
         })
 
-    
 </script>

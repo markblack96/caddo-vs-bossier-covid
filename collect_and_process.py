@@ -14,9 +14,9 @@ caddo_data = state_data[state_data['Parish'] == 'Caddo']
 bossier_data = state_data[state_data['Parish'] == 'Bossier']
 
 # isolate just the data we want and save it to json
-caddo_json = caddo_data[['Lab Collection Date', 'Daily Test Count', 'Daily Positive Test Count', 'Daily Case Count', 'datetime']].reset_index(drop=True).to_json(orient='index')
+caddo_json = caddo_data[['Lab Collection Date', 'Daily Test Count', 'Daily Positive Test Count', 'Daily Case Count', 'datetime']].reset_index(drop=True).to_json(orient='records')
 
-bossier_json = bossier_data[['Lab Collection Date', 'Daily Test Count', 'Daily Positive Test Count', 'Daily Case Count', 'datetime']].reset_index(drop=True).to_json(orient='index')
+bossier_json = bossier_data[['Lab Collection Date', 'Daily Test Count', 'Daily Positive Test Count', 'Daily Case Count', 'datetime']].reset_index(drop=True).to_json(orient='records')
 
 # save the data
 with open('data/caddo.json', 'w') as f:
