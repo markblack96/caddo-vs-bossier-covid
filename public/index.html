@@ -12,8 +12,15 @@
     }
 </style>
 <div id="opener">
-    <p>This website provides graphics which demonstrate covid-19 case trends in Caddo and Bossier Parishes.</p>
+    <p>This website provides graphics via d3.js which demonstrate covid-19 case trends in Caddo and Bossier Parishes.</p>
     <p>A project of <a href="http://portfolio.fnord.foundation">Mark Black</a>.</p>
+</div>
+<div id="controls">
+    Select a visualization to view:
+    <select>
+        <option value="percapitadailycases">Per capita daily cases</option>
+        <option value="percapitadailytests">Per capita daily tests</option>
+    </select>
 </div>
 <div id="main">
     <div id="caddo"></div>
@@ -28,6 +35,18 @@
     // declaring these up here for now, will do this better with new features
     // src: https://www.census.gov/data/datasets/time-series/demo/popest/2010s-counties-total.html
 async function dailyPerCapitaTestCount(parish, targetSelector) {
+    // remove any pre-existing graphs
+    let target = document.querySelector(targetSelector);
+    target.remove();
+    let newDiv = document.createElement('div');
+    newDiv.id = parish;
+    let main = document.querySelector('#main');
+    main.appendChild(newDiv);
+
+    let header = document.createElement('h3');
+    header.innerText = `${parish.substr(0,1).toUpperCase() + parish.substr(1)} Parish Covid-19 daily tests per capita`;
+    document.querySelector(targetSelector)
+            .appendChild(header);
 
     const CADDO_POP_2019 = 240204;
     let data = await fetch(`${parish}.json`).then(resp=>resp.json());
@@ -78,6 +97,96 @@ async function dailyPerCapitaTestCount(parish, targetSelector) {
                 )
                 
 }
+async function dailyPerCapitaCaseCount(parish, targetSelector) {
+    // remove any pre-existing graphs
+    let target = document.querySelector(targetSelector);
+    target.remove();
+    let newDiv = document.createElement('div');
+    newDiv.id = parish;
+    let main = document.querySelector('#main');
+    main.appendChild(newDiv);
+    
+    const BOSSIER_POP_2019 = 127039;
+    const CADDO_POP_2019 = 240204;
+
+    let margin = {top: 10, right: 30, bottom: 30, left: 60},
+        width = document.querySelector(targetSelector).offsetWidth - margin.left - margin.right,
+        height = 400 - margin.top - margin.bottom;
+
+    let header = document.createElement('h3');
+    header.innerText = `${parish.substr(0,1).toUpperCase() + parish.substr(1)} Parish Covid-19 daily cases per capita`;
+    document.querySelector(targetSelector)
+            .appendChild(header);
+
+    let svg = d3.select(targetSelector)
+        .append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+        .append('g')
+            .attr('transform',
+                  `translate(${margin.left}, ${margin.top})`);
+
+    let data = await fetch(`${parish}.json`).then(resp=>resp.json());
+
+    data.forEach((d,i)=>{
+                // we need to strip the last three 0's from Lab Collection Date or we get weird numbers
+                d['Lab Collection Date'] = d3.timeParse('%s')(String(d['Lab Collection Date']).slice(0, -3));
+                data[i] = d;
+            })
+            
+    let x = d3.scaleTime()
+        .domain(d3.extent(data, d=>d['Lab Collection Date']))
+        .range([0, width]);
+    
+    svg.append('g')
+        .attr('transform', `translate(0, ${height})`)
+        .call(d3.axisBottom(x));
+    
+    let population = parish === 'caddo' ? CADDO_POP_2019 : BOSSIER_POP_2019;
+
+    // user Bossier's max as a basis for both caddo and bossier since it's higher and gives us a uniform axis for easier comparison
+    let yMax = [0, d3.max(await fetch('bossier.json').then(d=>d.json()), d=>d['Daily Case Count']/BOSSIER_POP_2019)];
+    let y = d3.scaleLinear()
+            // .domain([0, d3.max(data, d=>d['Daily Case Count']/population)])
+            .domain(yMax)
+            .range([height, 0])
+
+    svg.append('g')
+        .call(d3.axisLeft(y));
+
+    // append the line
+    svg.append('path')
+                .datum(data)
+                .attr('fill', 'none')
+                .attr('stroke', '#222')
+                .attr('stroke-width', 1.5)
+                .attr('d', d3.line()
+                    .x(d=>x(d['Lab Collection Date']))
+                    .y(d=>y(d['Daily Case Count']/population))
+                )
+}
+
+(()=>{
+    // assign onchange to select
+    let select = document.querySelector('select');
+
+    select.onchange = (e) => {
+        let target = e.target;
+        switch (target.value) {
+            case "percapitadailycases":
+                // remove the current graph
+                dailyPerCapitaCaseCount('caddo', '#caddo');
+                dailyPerCapitaCaseCount('bossier', '#bossier');
+                break;
+            case "percapitadailytests":
+                dailyPerCapitaTestCount('caddo', '#caddo');
+                dailyPerCapitaTestCount('bossier', '#bossier');
+                break;
+        }
+    }
+})()
+
+/*
 (async ()=>{
     const BOSSIER_POP_2019 = 127039;
     const CADDO_POP_2019 = 240204;
@@ -113,7 +222,6 @@ async function dailyPerCapitaTestCount(parish, targetSelector) {
             json.forEach((d,i)=>{
                 // we need to strip the last three 0's from Lab Collection Date or we get weird numbers
                 d['Lab Collection Date'] = d3.timeParse('%s')(String(d['Lab Collection Date']).slice(0, -3));
-                console.log(d);
                 json[i] = d;
             })
             
@@ -196,4 +304,5 @@ async function dailyPerCapitaTestCount(parish, targetSelector) {
                 )
         }))
 })()
+*/
 </script>
