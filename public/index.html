@@ -10,30 +10,45 @@
     div#main div {
         width: 100%;
     }
+    .flex {
+        display: flex;
+    }
+    .column {
+        flex-direction: column;
+    }
+    @media only screen and (max-width: 720px) {
+        div#main {
+            flex-direction: column;
+        }
+    }
 </style>
-<div id="opener">
-    <p>This website provides graphics via d3.js which demonstrate covid-19 case trends in Caddo and Bossier Parishes.</p>
-    <p>A project of <a href="http://portfolio.fnord.foundation">Mark Black</a>.</p>
-</div>
-<div id="controls">
-    Select a visualization to view:
-    <select>
-        <option value="percapitadailycases">Per capita daily cases</option>
-        <option value="percapitadailytests">Per capita daily tests</option>
-    </select>
-</div>
-<div id="main">
-    <div id="caddo"></div>
-    <div id="bossier"></div>
-</div>
-<div>
-    <p>Source: <a href="https://ldh.la.gov/Coronavirus/">Louisiana Department of Health</a></p>
-</div>
-<div id="test"></div>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<body class="flex column">
+    <div id="opener">
+        <p>This website provides graphics via d3.js which demonstrate covid-19 case trends in Caddo and Bossier Parishes.</p>
+    </div>
+    <div id="controls">
+        Select a visualization to view:
+        <select>
+            <option value="percapitadailycases">Per capita daily cases</option>
+            <option value="percapitadailytests">Per capita daily tests</option>
+        </select>
+    </div>
+    <div id="main">
+        <div id="caddo"></div>
+        <div id="bossier"></div>
+    </div>
+    <div>
+        <p>A project by <a href="http://portfolio.fnord.foundation">Mark Black</a>.</p>
+        <p>Sources: </p>
+        <ul>
+            <li><a href="https://ldh.la.gov/Coronavirus/">Louisiana Department of Health</a></li>
+            <li><a href="https://www.census.gov/data/datasets/time-series/demo/popest/2010s-counties-total.html">United States Census</a></li>
+        </ul>
+    </div>
+</body>
 <script src="scripts/d3.js"></script>
 <script>
-    // declaring these up here for now, will do this better with new features
-    // src: https://www.census.gov/data/datasets/time-series/demo/popest/2010s-counties-total.html
 async function dailyPerCapitaTestCount(parish, targetSelector) {
     // remove any pre-existing graphs
     let target = document.querySelector(targetSelector);
@@ -66,7 +81,6 @@ async function dailyPerCapitaTestCount(parish, targetSelector) {
     data.forEach((d,i)=>{
                 // we need to strip the last three 0's from Lab Collection Date or we get weird numbers
                 d['Lab Collection Date'] = d3.timeParse('%s')(String(d['Lab Collection Date']).slice(0, -3));
-                console.log(d);
                 data[i] = d;
             })
             
@@ -105,7 +119,7 @@ async function dailyPerCapitaCaseCount(parish, targetSelector) {
     newDiv.id = parish;
     let main = document.querySelector('#main');
     main.appendChild(newDiv);
-    
+
     const BOSSIER_POP_2019 = 127039;
     const CADDO_POP_2019 = 240204;
 
