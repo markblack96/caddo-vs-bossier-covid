@@ -11,14 +11,73 @@
         width: 100%;
     }
 </style>
+<div id="opener">
+    <p>This website provides graphics which demonstrate covid-19 case trends in Caddo and Bossier Parishes.</p>
+    <p>A project of <a href="http://portfolio.fnord.foundation">Mark Black</a>.</p>
+</div>
 <div id="main">
     <div id="caddo"></div>
     <div id="bossier"></div>
 </div>
+<div>
+    <p>Source: <a href="https://ldh.la.gov/Coronavirus/">Louisiana Department of Health</a></p>
+</div>
+<div id="test"></div>
 <script src="scripts/d3.js"></script>
 <script>
     // declaring these up here for now, will do this better with new features
     // src: https://www.census.gov/data/datasets/time-series/demo/popest/2010s-counties-total.html
+async function dailyPerCapitaTestCount(parish, targetSelector) {
+
+    const CADDO_POP_2019 = 240204;
+    let data = await fetch(`${parish}.json`).then(resp=>resp.json());
+
+    let margin = {top: 10, right: 30, bottom: 30, left: 60},
+        width = document.querySelector(targetSelector).offsetWidth - margin.left - margin.right,
+        height = 400 - margin.top - margin.bottom;
+
+    let svg = d3.select(targetSelector)
+        .append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+        .append('g')
+            .attr('transform',
+                  `translate(${margin.left}, ${margin.top})`);
+        
+    data.forEach((d,i)=>{
+                // we need to strip the last three 0's from Lab Collection Date or we get weird numbers
+                d['Lab Collection Date'] = d3.timeParse('%s')(String(d['Lab Collection Date']).slice(0, -3));
+                console.log(d);
+                data[i] = d;
+            })
+            
+    let x = d3.scaleTime()
+        .domain(d3.extent(data, d=>d['Lab Collection Date']))
+        .range([0, width]);
+    
+    svg.append('g')
+        .attr('transform', `translate(0, ${height})`)
+        .call(d3.axisBottom(x));
+    
+    let y = d3.scaleLinear()
+            .domain([0, d3.max(data, d=>d['Daily Test Count']/CADDO_POP_2019)])
+            .range([height, 0])
+
+    svg.append('g')
+        .call(d3.axisLeft(y));
+
+    // append the line
+    svg.append('path')
+                .datum(data)
+                .attr('fill', 'none')
+                .attr('stroke', '#222')
+                .attr('stroke-width', 1.5)
+                .attr('d', d3.line()
+                    .x(d=>x(d['Lab Collection Date']))
+                    .y(d=>y(d['Daily Test Count']/CADDO_POP_2019))
+                )
+                
+}
 (async ()=>{
     const BOSSIER_POP_2019 = 127039;
     const CADDO_POP_2019 = 240204;
@@ -48,7 +107,7 @@
             .attr('transform',
                   'translate(' + margin.left + ',' + margin.top + ")");
         
-    d3.json('bossier.json')
+    d3.json('bossier.json') // we can actually just use await here
         .then(json=>{
             // format Lab Collection Date
             json.forEach((d,i)=>{

@@ -18,4 +18,8 @@ def caddo():
 def bossier():
     return static_file('bossier.json', root='./data/')
 
+@route('/caddo-summary.json')
+def caddo_summary():
+    return static_file('caddo-summary.json', root='./data/')
+
 run(host='localhost', port=5000)
