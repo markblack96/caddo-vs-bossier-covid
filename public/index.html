@@ -3,6 +3,9 @@
 <style>
     body {
         background-color: #eee;
+        font-family: sans-serif;
+        max-width: 90vw;
+        margin: 0 auto;
     }
     div#main {
         display: flex;
@@ -16,9 +19,28 @@
     .column {
         flex-direction: column;
     }
+    #descriptive-stats {
+        justify-content: center;
+    }
+    /*
+    #descriptive-stats div {
+        width: 50%;
+    }
+    */
+    #controls {
+        margin-top: 1em;
+    }
     @media only screen and (max-width: 720px) {
+        body {
+            max-width: 98vw;
+        }
         div#main {
             flex-direction: column;
+        }
+        #controls select {
+            width: 100%;
+            height: 4em;
+            font-size: 1em;
         }
     }
 </style>
@@ -26,6 +48,7 @@
 <body class="flex column">
     <div id="opener">
         <p>Tracking covid-19 trends in Caddo and Bossier Parishes.</p>
+        <p>Public data provided by Louisiana Department of Health lags by two weeks, as the number of daily reported cases is likely to increase within this time range.</p>
     </div>
     <div id="descriptive-stats" class="flex">
         <div id="caddo-descriptive"></div>
@@ -60,13 +83,31 @@ async function descriptiveStats(parish) {
     let table = document.createElement('table');
     // some people say this approach is gauche but I'm just vibing
     table.innerHTML = `
-    <tr><th>${parish.substr(0,1).toUpperCase() + parish.substr(1)} at a glance...</th></tr>
+    <thead><tr><th colspan="2">${parish.substr(0,1).toUpperCase() + parish.substr(1)} at a glance...</th></tr></thead>
     <tr><td>Total Tests</td><td>${data['Total Tests']}</td></tr>
     <tr><td>Total Cases</td><td>${data['Total Cases']}</td></tr>
-    <tr><td>Latest Data</td><td>${data['Latest Data']}</td></tr>
+    <tr><td>Latest Data</td><td>${new Date(data['Latest Data']).toDateString()}</td></tr>
     `;
     container.appendChild(table);
     return container;
+}
+function sevenDayAverage(data) {
+    /*
+     * Takes in x,y observations and spits out a rolling average
+     */
+    return data.map((d, i, _arr)=>{
+        return _arr.filter(
+            (x2, i2) => {
+                return i2 <= i && i2 > i - 7;
+            })
+            .reduce(
+                (current, last, index, arr) => {
+                    return (current + last);
+                }
+            )/7 || 0;
+            
+    });
+    
 }
 async function dailyPerCapitaTestCount(parish, targetSelector) {
     // remove any pre-existing graphs
@@ -128,6 +169,19 @@ async function dailyPerCapitaTestCount(parish, targetSelector) {
                     .x(d=>x(d['Lab Collection Date']))
                     .y(d=>y(d['Daily Test Count']/CADDO_POP_2019))
                 )
+    
+    let movingAverageLine = sevenDayAverage(data.map(d=>d['Daily Test Count']/CADDO_POP_2019))
+    movingAverageLine = movingAverageLine.map((d, i)=>{ return {x: data[i]['Lab Collection Date'], y: d} })
+    console.log(movingAverageLine);
+    svg.append('path')
+        .datum(movingAverageLine)
+        .attr('fill', 'none')
+        .attr('stroke', '#f00')
+        .attr('stroke-width', 1.5)
+        .attr('d', d3.line()
+            .x(d=>x(d.x))
+            .y(d=>y(d.y))
+        )
                 
 }
 async function dailyPerCapitaCaseCount(parish, targetSelector) {
@@ -197,6 +251,19 @@ async function dailyPerCapitaCaseCount(parish, targetSelector) {
                     .x(d=>x(d['Lab Collection Date']))
                     .y(d=>y(d['Daily Case Count']/population))
                 )
+
+    // build seven day rolling average
+    let movingAverageLine = sevenDayAverage(data.map(d=>d['Daily Case Count']/population))
+    movingAverageLine = movingAverageLine.map((d, i)=>{ return {x: data[i]['Lab Collection Date'], y: d} })
+    svg.append('path')
+        .datum(movingAverageLine)
+        .attr('fill', 'none')
+        .attr('stroke', '#f00')
+        .attr('stroke-width', 1.5)
+        .attr('d', d3.line()
+            .x(d=>x(d.x))
+            .y(d=>y(d.y))
+        )
 }
 
 (async ()=>{
