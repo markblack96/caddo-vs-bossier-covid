@@ -25,11 +25,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <body class="flex column">
     <div id="opener">
-        <p>This website provides graphics via d3.js which demonstrate covid-19 case trends in Caddo and Bossier Parishes.</p>
+        <p>Tracking covid-19 trends in Caddo and Bossier Parishes.</p>
+    </div>
+    <div id="descriptive-stats" class="flex">
+        <div id="caddo-descriptive"></div>
+        <div id="bossier-descriptive"></div>
     </div>
     <div id="controls">
         Select a visualization to view:
         <select>
+            <option value="">Select...</option>
             <option value="percapitadailycases">Per capita daily cases</option>
             <option value="percapitadailytests">Per capita daily tests</option>
         </select>
@@ -39,7 +44,7 @@
         <div id="bossier"></div>
     </div>
     <div>
-        <p>A project by <a href="http://portfolio.fnord.foundation">Mark Black</a>.</p>
+        <p>A project by <a href="http://portfolio.fnord.foundation">Fnord Foundation</a>.</p>
         <p>Sources: </p>
         <ul>
             <li><a href="https://ldh.la.gov/Coronavirus/">Louisiana Department of Health</a></li>
@@ -49,6 +54,20 @@
 </body>
 <script src="scripts/d3.js"></script>
 <script>
+async function descriptiveStats(parish) {
+    let data = await fetch(`data/${parish}Descrip.json`).then(resp=>resp.json());
+    let container = document.createElement('div');
+    let table = document.createElement('table');
+    // some people say this approach is gauche but I'm just vibing
+    table.innerHTML = `
+    <tr><th>${parish.substr(0,1).toUpperCase() + parish.substr(1)} at a glance...</th></tr>
+    <tr><td>Total Tests</td><td>${data['Total Tests']}</td></tr>
+    <tr><td>Total Cases</td><td>${data['Total Cases']}</td></tr>
+    <tr><td>Latest Data</td><td>${data['Latest Data']}</td></tr>
+    `;
+    container.appendChild(table);
+    return container;
+}
 async function dailyPerCapitaTestCount(parish, targetSelector) {
     // remove any pre-existing graphs
     let target = document.querySelector(targetSelector);
@@ -180,10 +199,13 @@ async function dailyPerCapitaCaseCount(parish, targetSelector) {
                 )
 }
 
-(()=>{
+(async ()=>{
     // assign onchange to select
     let select = document.querySelector('select');
-
+    let caddo = document.querySelector('#caddo-descriptive');
+    caddo.appendChild(await descriptiveStats('caddo'))
+    let bossier = document.querySelector('#bossier-descriptive');
+    bossier.appendChild(await descriptiveStats('bossier'))
     select.onchange = (e) => {
         let target = e.target;
         switch (target.value) {
