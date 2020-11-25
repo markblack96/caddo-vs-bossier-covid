@@ -107,7 +107,7 @@ let div = d3.select('body').append('div')
             .style('opacity', 0);
 async function descriptiveStats(parish) {
     // let data = await fetch(`data/${parish}Descrip.json`).then(resp=>resp.json());
-    let data = await fetch(`${window.location.href.split('?')[0]}/data/${parish}.json`).then(resp=>resp.json());
+    let data = await fetch(`${window.location.href.split('?')[0]}/data/${parish}Descrip.json`).then(resp=>resp.json());
     let container = document.createElement('div');
     let table = document.createElement('table');
     // some people say this approach is gauche but I'm just vibing
