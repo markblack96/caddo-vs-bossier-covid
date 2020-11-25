@@ -80,6 +80,7 @@
             <option value="">Select...</option>
             <option value="percapitadailycases">Per capita daily cases</option>
             <option value="percapitadailytests">Per capita daily tests</option>
+            <option value="dailypercentpositivetests">Daily percent positive tests</option>
         </select>
     </div>
     <div id="main">
@@ -105,7 +106,8 @@ let div = d3.select('body').append('div')
             .attr('class', 'tooltip')
             .style('opacity', 0);
 async function descriptiveStats(parish) {
-    let data = await fetch(`data/${parish}Descrip.json`).then(resp=>resp.json());
+    // let data = await fetch(`data/${parish}Descrip.json`).then(resp=>resp.json());
+    let data = await fetch(`${window.location.href.split('?')[0]}/data/${parish}.json`).then(resp=>resp.json());
     let container = document.createElement('div');
     let table = document.createElement('table');
     // some people say this approach is gauche but I'm just vibing
@@ -152,8 +154,8 @@ async function dailyPerCapitaTestCount(parish, targetSelector) {
             .appendChild(header);
 
     const CADDO_POP_2019 = 240204;
-    let data = await fetch(`${parish}.json`).then(resp=>resp.json());
-
+    // let data = await fetch(`${parish}.json`).then(resp=>resp.json());
+    let data = await fetch(`${window.location.href.split('?')[0]}/data/${parish}.json`).then(resp=>resp.json());
     let margin = {top: 10, right: 30, bottom: 30, left: 60},
         width = document.querySelector(targetSelector).offsetWidth - margin.left - margin.right,
         height = 400 - margin.top - margin.bottom;
@@ -275,7 +277,8 @@ async function dailyPerCapitaCaseCount(parish, targetSelector) {
             .attr('transform',
                   `translate(${margin.left}, ${margin.top})`);
 
-    let data = await fetch(`${parish}.json`).then(resp=>resp.json());
+    // let data = await fetch(`${parish}.json`).then(resp=>resp.json());
+    let data = await fetch(`${window.location.href.split('?')[0]}/data/${parish}.json`).then(resp=>resp.json());
 
     data.forEach((d,i)=>{
                 // we need to strip the last three 0's from Lab Collection Date or we get weird numbers
@@ -293,8 +296,9 @@ async function dailyPerCapitaCaseCount(parish, targetSelector) {
     
     let population = parish === 'caddo' ? CADDO_POP_2019 : BOSSIER_POP_2019;
 
-    // user Bossier's max as a basis for both caddo and bossier since it's higher and gives us a uniform axis for easier comparison
-    let yMax = [0, d3.max(await fetch('bossier.json').then(d=>d.json()), d=>d['Daily Case Count']/BOSSIER_POP_2019)];
+    // use Bossier's max as a basis for both caddo and bossier since it's higher and gives us a uniform axis for easier comparison
+    // let yMax = [0, d3.max(await fetch('bossier.json').then(d=>d.json()), d=>d['Daily Case Count']/BOSSIER_POP_2019)];
+    let yMax = [0, d3.max(await fetch(window.location.href.split('?')[0] + '/data/bossier.json').then(d=>d.json()), d=>d['Daily Case Count']/BOSSIER_POP_2019)];
     let y = d3.scaleLinear()
             // .domain([0, d3.max(data, d=>d['Daily Case Count']/population)])
             .domain(yMax)
@@ -302,9 +306,6 @@ async function dailyPerCapitaCaseCount(parish, targetSelector) {
 
     svg.append('g')
         .call(d3.axisLeft(y));
-
-
-    
 
     // append the line (legacy)
     /*
@@ -368,7 +369,109 @@ async function dailyPerCapitaCaseCount(parish, targetSelector) {
     key.innerHTML = tableTemplate;
     document.querySelector(`#${parish}`).appendChild(key);
 }
+async function dailyPercentPositiveTests(parish, targetSelector) {
+    let target = document.querySelector(targetSelector);
+    target.remove();
+    let newDiv = document.createElement('div');
+    newDiv.id = parish;
+    let main = document.querySelector('#main');
+    main.appendChild(newDiv);
 
+    let margin = {top: 10, right: 30, bottom: 30, left: 60},
+        width = document.querySelector(targetSelector).offsetWidth - margin.left - margin.right,
+        height = 400 - margin.top - margin.bottom;
+
+    let header = document.createElement('h3');
+    header.innerText = `${parish.substr(0,1).toUpperCase() + parish.substr(1)} Parish Covid-19 daily % positive tests`;
+    document.querySelector(targetSelector)
+            .appendChild(header);
+
+    let svg = d3.select(targetSelector)
+        .append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+        .append('g')
+            .attr('transform',
+                  `translate(${margin.left}, ${margin.top})`);
+
+    // let data = await fetch(`${parish}.json`).then(resp=>resp.json());
+    let data = await fetch(`${window.location.href.split('?')[0]}/data/${parish}.json`).then(resp=>resp.json());
+
+    data.forEach((d,i)=>{
+                // we need to strip the last three 0's from Lab Collection Date or we get weird numbers
+                d['Lab Collection Date'] = d3.timeParse('%s')(String(d['Lab Collection Date']).slice(0, -3));
+                data[i] = d;
+            })
+            
+    let x = d3.scaleTime()
+        .domain(d3.extent(data, d=>d['Lab Collection Date']))
+        .range([0, width]);
+    
+    svg.append('g')
+        .attr('transform', `translate(0, ${height})`)
+        .call(d3.axisBottom(x));
+    
+    let population = parish === 'caddo' ? CADDO_POP_2019 : BOSSIER_POP_2019;
+
+    // use caddo's because it's got the highest value
+    // let yMax = [0, d3.max(await fetch('caddo.json').then(d=>d.json()), d=>(d['Daily Positive Test Count']/d['Daily Test Count']))];
+    let yMax = [0, d3.max(await fetch(window.location.href.split('?')[0] + '/data/bossier.json').then(d=>d.json()), d=>(d['Daily Positive Test Count']/d['Daily Test Count']))];
+    let y = d3.scaleLinear()
+            // .domain([0, d3.max(data, d=>d['Daily Case Count']/population)])
+            .domain(yMax)
+            .range([height, 0])
+
+    svg.append('g')
+        .call(d3.axisLeft(y));
+
+    // append bars
+    svg.selectAll('bar')
+            .data(data)
+        .enter().append('rect')
+            .style('fill', '#222')
+            .attr('x', d=>x(d['Lab Collection Date']))
+            .attr('width', width/data.length)
+            .attr('y', d=>y((d['Daily Positive Test Count']/d['Daily Test Count'])))
+            .attr('height', d=>height-y((d['Daily Positive Test Count']/d['Daily Test Count'])))
+        .on('mouseover', (e, d)=>{
+            console.log(d);
+            div.transition()
+                .duration(200)
+                .style('opacity', '0.9');
+            div.html(`${d['Lab Collection Date']}<br/>${((d['Daily Positive Test Count']/d['Daily Test Count'])*100).toFixed(2)}%`)
+                .style('left', `${e.pageX}px`)
+                .style('top', `${e.pageY - 28}px`)
+        })
+        .on('mouseout', (d)=>{
+            div.transition()
+                .duration(500)
+                .style('opacity', 0);
+        });
+
+    // build seven day rolling average
+    let movingAverageLine = sevenDayAverage(data.map(d=>(d['Daily Positive Test Count']/d['Daily Test Count'])))
+    movingAverageLine = movingAverageLine.map((d, i)=>{ return {x: data[i]['Lab Collection Date'], y: d} })
+    svg.append('path')
+        .datum(movingAverageLine)
+        .attr('fill', 'none')
+        .attr('stroke', '#f00')
+        .attr('stroke-width', 1.5)
+        .attr('d', d3.line()
+            .x(d=>x(d.x))
+            .y(d=>y(d.y))
+        )
+
+    // table for key
+    let tableTemplate = `
+        <table class="key">
+            <tr><td class="key-element count"></td><td>Case count</td></tr>
+            <tr><td class="key-element avg-line"></td><td>7-day moving average</td></tr>
+        </table>
+    `;
+    let key = document.createElement('div');
+    key.innerHTML = tableTemplate;
+    document.querySelector(`#${parish}`).appendChild(key);
+}
 (async ()=>{
     // assign onchange to select
     let select = document.querySelector('select');
@@ -388,6 +491,10 @@ async function dailyPerCapitaCaseCount(parish, targetSelector) {
                 dailyPerCapitaTestCount('caddo', '#caddo');
                 dailyPerCapitaTestCount('bossier', '#bossier');
                 break;
+            case "dailypercentpositivetests":
+                dailyPercentPositiveTests('caddo', '#caddo');
+                dailyPercentPositiveTests('bossier', '#bossier');
+
         }
     }
 })()
